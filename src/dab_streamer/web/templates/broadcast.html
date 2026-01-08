@@ -1,0 +1,364 @@
+{% extends "base.html" %}
+
+{% block title %}Diffusion - DAB+ Podcast Streamer{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h1><i class="bi bi-broadcast"></i> Contrôle de la diffusion DAB+</h1>
+        <hr>
+    </div>
+</div>
+
+<!-- Broadcast Control -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h5><i class="bi bi-sliders"></i> Contrôle de diffusion</h5>
+            </div>
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <span>État du multiplexeur:</span>
+                    <span id="mux-status" class="badge bg-secondary">Hors ligne</span>
+                </div>
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <span>État du scheduler:</span>
+                    <span id="scheduler-status" class="badge bg-secondary">Arrêté</span>
+                </div>
+                <hr>
+                <div class="btn-group w-100" role="group">
+                    <button class="btn btn-success" onclick="startBroadcast()" id="start-btn">
+                        <i class="bi bi-play-fill"></i> Démarrer
+                    </button>
+                    <button class="btn btn-danger" onclick="stopBroadcast()" id="stop-btn" disabled>
+                        <i class="bi bi-stop-fill"></i> Arrêter
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header bg-success text-white">
+                <h5><i class="bi bi-play-circle"></i> Lecture en cours</h5>
+            </div>
+            <div class="card-body">
+                <div id="now-playing-info">
+                    <p class="text-muted">Aucune lecture en cours</p>
+                </div>
+                <div class="btn-group w-100 mt-3" role="group">
+                    <button class="btn btn-outline-primary" onclick="controlPrevious()">
+                        <i class="bi bi-skip-backward-fill"></i>
+                    </button>
+                    <button class="btn btn-primary" id="play-pause-btn" onclick="controlPlayPause()">
+                        <i class="bi bi-play-fill"></i>
+                    </button>
+                    <button class="btn btn-outline-primary" onclick="controlSkip()">
+                        <i class="bi bi-skip-forward-fill"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Playlist -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5><i class="bi bi-list-ol"></i> Playlist</h5>
+                <div>
+                    <button class="btn btn-sm btn-outline-primary" onclick="autoFillPlaylist()">
+                        <i class="bi bi-magic"></i> Remplissage auto
+                    </button>
+                    <button class="btn btn-sm btn-outline-secondary" onclick="shufflePlaylist()">
+                        <i class="bi bi-shuffle"></i> Mélanger
+                    </button>
+                    <button class="btn btn-sm btn-outline-danger" onclick="clearPlaylist()">
+                        <i class="bi bi-trash"></i> Vider
+                    </button>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover" id="playlist-table">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Episode</th>
+                                <th>Podcast</th>
+                                <th>Durée</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="playlist-body">
+                            <tr>
+                                <td colspan="5" class="text-center text-muted">Playlist vide</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- DAB+ Configuration -->
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="bi bi-gear"></i> Configuration DAB+</h5>
+            </div>
+            <div class="card-body">
+                <div class="row" id="dab-config">
+                    <div class="col-md-3">
+                        <strong>Ensemble:</strong> <span id="ensemble-label">-</span>
+                    </div>
+                    <div class="col-md-3">
+                        <strong>Services:</strong> <span id="services-count">-</span>
+                    </div>
+                    <div class="col-md-3">
+                        <strong>Sous-canaux:</strong> <span id="subchannels-count">-</span>
+                    </div>
+                    <div class="col-md-3">
+                        <strong>Format sortie:</strong> <span id="output-format">-</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let isPlaying = false;
+
+async function loadBroadcastStatus() {
+    try {
+        const res = await fetch('/api/broadcast/status');
+        const data = await res.json();
+
+        if (data.success) {
+            const mux = data.multiplexer;
+            const sched = data.scheduler;
+
+            // Multiplexer status
+            const muxStatus = document.getElementById('mux-status');
+            if (mux.running) {
+                muxStatus.textContent = 'En ligne';
+                muxStatus.className = 'badge bg-success';
+            } else if (mux.odr_dabmux_available) {
+                muxStatus.textContent = 'Prêt';
+                muxStatus.className = 'badge bg-warning';
+            } else {
+                muxStatus.textContent = 'Non disponible';
+                muxStatus.className = 'badge bg-secondary';
+            }
+
+            // Scheduler status
+            const schedStatus = document.getElementById('scheduler-status');
+            if (sched.playing) {
+                schedStatus.textContent = 'Lecture en cours';
+                schedStatus.className = 'badge bg-success';
+                isPlaying = true;
+            } else if (sched.running) {
+                schedStatus.textContent = 'En attente';
+                schedStatus.className = 'badge bg-warning';
+                isPlaying = false;
+            } else {
+                schedStatus.textContent = 'Arrêté';
+                schedStatus.className = 'badge bg-secondary';
+                isPlaying = false;
+            }
+
+            // Buttons
+            document.getElementById('start-btn').disabled = sched.running;
+            document.getElementById('stop-btn').disabled = !sched.running;
+
+            // Now playing
+            if (sched.current_item) {
+                document.getElementById('now-playing-info').innerHTML = `
+                    <h4>${sched.current_item.episode}</h4>
+                    <p class="text-muted mb-0">${sched.current_item.podcast}</p>
+                    <small>Durée: ${formatDuration(sched.current_item.duration)}</small>
+                `;
+            } else {
+                document.getElementById('now-playing-info').innerHTML = `
+                    <p class="text-muted">Aucune lecture en cours</p>
+                `;
+            }
+
+            // DAB+ Config
+            document.getElementById('ensemble-label').textContent = mux.ensemble.label;
+            document.getElementById('services-count').textContent = mux.services;
+            document.getElementById('subchannels-count').textContent = mux.subchannels;
+
+            updatePlayPauseButton();
+        }
+    } catch (error) {
+        console.error('Error loading broadcast status:', error);
+    }
+}
+
+async function loadPlaylist() {
+    try {
+        const res = await fetch('/api/playlist');
+        const data = await res.json();
+
+        if (data.success) {
+            const tbody = document.getElementById('playlist-body');
+
+            if (data.playlist.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="5" class="text-center text-muted">Playlist vide</td>
+                    </tr>
+                `;
+                return;
+            }
+
+            tbody.innerHTML = data.playlist.map((item, idx) => `
+                <tr class="${item.is_current ? 'table-primary' : ''}">
+                    <td>${idx + 1}</td>
+                    <td>
+                        ${item.is_current ? '<i class="bi bi-play-fill"></i> ' : ''}
+                        ${item.episode_title}
+                    </td>
+                    <td>${item.podcast_title}</td>
+                    <td>${formatDuration(item.duration)}</td>
+                    <td>
+                        <button class="btn btn-sm btn-outline-danger" onclick="removeFromPlaylist(${item.index})">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+    } catch (error) {
+        console.error('Error loading playlist:', error);
+    }
+}
+
+async function loadSettings() {
+    try {
+        const res = await fetch('/api/settings');
+        const data = await res.json();
+
+        if (data.success) {
+            document.getElementById('output-format').textContent = data.settings.dab.output_format.toUpperCase();
+        }
+    } catch (error) {
+        console.error('Error loading settings:', error);
+    }
+}
+
+function updatePlayPauseButton() {
+    const btn = document.getElementById('play-pause-btn');
+    if (isPlaying) {
+        btn.innerHTML = '<i class="bi bi-pause-fill"></i>';
+    } else {
+        btn.innerHTML = '<i class="bi bi-play-fill"></i>';
+    }
+}
+
+async function startBroadcast() {
+    try {
+        const res = await fetch('/api/broadcast/start', { method: 'POST' });
+        const data = await res.json();
+
+        if (data.success) {
+            loadBroadcastStatus();
+        } else {
+            alert('Erreur: ' + data.error);
+        }
+    } catch (error) {
+        console.error('Error starting broadcast:', error);
+    }
+}
+
+async function stopBroadcast() {
+    try {
+        const res = await fetch('/api/broadcast/stop', { method: 'POST' });
+        loadBroadcastStatus();
+    } catch (error) {
+        console.error('Error stopping broadcast:', error);
+    }
+}
+
+async function controlPlayPause() {
+    const endpoint = isPlaying ? '/api/broadcast/pause' : '/api/broadcast/play';
+    await fetch(endpoint, { method: 'POST' });
+    isPlaying = !isPlaying;
+    updatePlayPauseButton();
+    loadBroadcastStatus();
+}
+
+async function controlSkip() {
+    await fetch('/api/broadcast/skip', { method: 'POST' });
+    loadBroadcastStatus();
+    loadPlaylist();
+}
+
+async function controlPrevious() {
+    await fetch('/api/broadcast/previous', { method: 'POST' });
+    loadBroadcastStatus();
+    loadPlaylist();
+}
+
+async function autoFillPlaylist() {
+    try {
+        const res = await fetch('/api/playlist/auto-fill', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ hours: 4 })
+        });
+        const data = await res.json();
+
+        if (data.success) {
+            alert(`${data.added} épisodes ajoutés à la playlist`);
+            loadPlaylist();
+        }
+    } catch (error) {
+        console.error('Error auto-filling playlist:', error);
+    }
+}
+
+async function shufflePlaylist() {
+    await fetch('/api/playlist/shuffle', { method: 'POST' });
+    loadPlaylist();
+}
+
+async function clearPlaylist() {
+    if (!confirm('Vider la playlist?')) return;
+    await fetch('/api/playlist/clear', { method: 'POST' });
+    loadPlaylist();
+}
+
+async function removeFromPlaylist(index) {
+    await fetch(`/api/playlist/${index}`, { method: 'DELETE' });
+    loadPlaylist();
+}
+
+function formatDuration(seconds) {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+}
+
+// Initial load
+loadBroadcastStatus();
+loadPlaylist();
+loadSettings();
+
+// Auto-refresh
+setInterval(() => {
+    loadBroadcastStatus();
+    loadPlaylist();
+}, 3000);
+</script>
+{% endblock %}

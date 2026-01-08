@@ -1,0 +1,253 @@
+{% extends "base.html" %}
+
+{% block title %}Paramètres - DAB+ Podcast Streamer{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h1><i class="bi bi-gear"></i> Paramètres</h1>
+        <hr>
+    </div>
+</div>
+
+<div class="row">
+    <!-- DAB+ Settings -->
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h5><i class="bi bi-broadcast"></i> Configuration DAB+</h5>
+            </div>
+            <div class="card-body">
+                <form id="dab-settings-form">
+                    <div class="mb-3">
+                        <label class="form-label">Label de l'ensemble</label>
+                        <input type="text" class="form-control" id="ensemble-label" maxlength="16">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">ID de l'ensemble</label>
+                        <input type="text" class="form-control" id="ensemble-id" placeholder="0x1234">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Label du service</label>
+                        <input type="text" class="form-control" id="service-label" maxlength="16">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Bitrate (kbps)</label>
+                        <select class="form-select" id="dab-bitrate">
+                            <option value="32">32 kbps</option>
+                            <option value="48">48 kbps</option>
+                            <option value="64">64 kbps</option>
+                            <option value="80">80 kbps</option>
+                            <option value="96">96 kbps</option>
+                            <option value="128">128 kbps</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Format de sortie</label>
+                        <select class="form-select" id="output-format">
+                            <option value="edi">EDI (UDP)</option>
+                            <option value="eti">ETI (Fichier)</option>
+                            <option value="zmq">ZeroMQ</option>
+                        </select>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Encoder Settings -->
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header bg-success text-white">
+                <h5><i class="bi bi-soundwave"></i> Configuration Encodeur</h5>
+            </div>
+            <div class="card-body">
+                <form id="encoder-settings-form">
+                    <div class="mb-3">
+                        <label class="form-label">Codec audio</label>
+                        <select class="form-select" id="codec">
+                            <option value="he-aacv2">HE-AAC v2 (Recommandé)</option>
+                            <option value="he-aacv1">HE-AAC v1</option>
+                            <option value="aac-lc">AAC-LC</option>
+                        </select>
+                        <div class="form-text">HE-AAC v2 offre la meilleure qualité à bas débit</div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Bitrate encodeur (kbps)</label>
+                        <select class="form-select" id="encoder-bitrate">
+                            <option value="24">24 kbps</option>
+                            <option value="32">32 kbps</option>
+                            <option value="48">48 kbps</option>
+                            <option value="64">64 kbps</option>
+                            <option value="80">80 kbps</option>
+                            <option value="96">96 kbps</option>
+                        </select>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Podcast Settings -->
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header bg-info text-white">
+                <h5><i class="bi bi-mic"></i> Configuration Podcasts</h5>
+            </div>
+            <div class="card-body">
+                <form id="podcast-settings-form">
+                    <div class="mb-3">
+                        <label class="form-label">Nombre max d'épisodes par podcast</label>
+                        <input type="number" class="form-control" id="max-episodes" min="1" max="100">
+                    </div>
+                    <div class="mb-3 form-check">
+                        <input type="checkbox" class="form-check-input" id="auto-cleanup">
+                        <label class="form-check-label">Nettoyage automatique</label>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Supprimer après (jours)</label>
+                        <input type="number" class="form-control" id="cleanup-days" min="1" max="365">
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- System Info -->
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header bg-secondary text-white">
+                <h5><i class="bi bi-cpu"></i> Informations système</h5>
+            </div>
+            <div class="card-body">
+                <table class="table table-sm">
+                    <tr>
+                        <td><strong>Version</strong></td>
+                        <td id="sys-version">-</td>
+                    </tr>
+                    <tr>
+                        <td><strong>FFmpeg</strong></td>
+                        <td id="sys-ffmpeg">-</td>
+                    </tr>
+                    <tr>
+                        <td><strong>libfdk_aac</strong></td>
+                        <td id="sys-fdk">-</td>
+                    </tr>
+                    <tr>
+                        <td><strong>ODR-DabMux</strong></td>
+                        <td id="sys-dabmux">-</td>
+                    </tr>
+                    <tr>
+                        <td><strong>ODR-AudioEnc</strong></td>
+                        <td id="sys-audioenc">-</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <button class="btn btn-primary btn-lg" onclick="saveSettings()">
+            <i class="bi bi-save"></i> Sauvegarder les paramètres
+        </button>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+async function loadSettings() {
+    try {
+        const res = await fetch('/api/settings');
+        const data = await res.json();
+
+        if (data.success) {
+            const s = data.settings;
+
+            // DAB+
+            document.getElementById('ensemble-label').value = s.dab.ensemble_label;
+            document.getElementById('ensemble-id').value = s.dab.ensemble_id;
+            document.getElementById('service-label').value = s.dab.service_label;
+            document.getElementById('dab-bitrate').value = s.dab.bitrate;
+            document.getElementById('output-format').value = s.dab.output_format;
+
+            // Encoder
+            document.getElementById('codec').value = s.encoder.codec;
+            document.getElementById('encoder-bitrate').value = s.encoder.bitrate;
+
+            // Podcast
+            document.getElementById('max-episodes').value = s.podcast.max_episodes;
+            document.getElementById('auto-cleanup').checked = s.podcast.auto_cleanup;
+            document.getElementById('cleanup-days').value = s.podcast.cleanup_days;
+        }
+
+        // System info
+        const sysRes = await fetch('/api/system/info');
+        const sysData = await sysRes.json();
+
+        if (sysData.success) {
+            document.getElementById('sys-version').textContent = sysData.version;
+
+            const setStatus = (id, available) => {
+                const el = document.getElementById(id);
+                el.innerHTML = available
+                    ? '<span class="badge bg-success">Disponible</span>'
+                    : '<span class="badge bg-warning">Non disponible</span>';
+            };
+
+            setStatus('sys-ffmpeg', sysData.tools.ffmpeg);
+            setStatus('sys-fdk', sysData.tools.libfdk_aac);
+            setStatus('sys-dabmux', sysData.odr_dabmux);
+            setStatus('sys-audioenc', sysData.tools['odr-audioenc']);
+        }
+
+    } catch (error) {
+        console.error('Error loading settings:', error);
+    }
+}
+
+async function saveSettings() {
+    const settings = {
+        dab: {
+            ensemble_label: document.getElementById('ensemble-label').value,
+            ensemble_id: document.getElementById('ensemble-id').value,
+            service_label: document.getElementById('service-label').value,
+            bitrate: parseInt(document.getElementById('dab-bitrate').value),
+            output_format: document.getElementById('output-format').value,
+        },
+        encoder: {
+            codec: document.getElementById('codec').value,
+            bitrate: parseInt(document.getElementById('encoder-bitrate').value),
+        },
+        podcast: {
+            max_episodes: parseInt(document.getElementById('max-episodes').value),
+            auto_cleanup: document.getElementById('auto-cleanup').checked,
+            cleanup_days: parseInt(document.getElementById('cleanup-days').value),
+        }
+    };
+
+    try {
+        const res = await fetch('/api/settings', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(settings)
+        });
+
+        const data = await res.json();
+
+        if (data.success) {
+            alert('Paramètres sauvegardés!');
+        } else {
+            alert('Erreur: ' + data.error);
+        }
+    } catch (error) {
+        console.error('Error saving settings:', error);
+        alert('Erreur lors de la sauvegarde');
+    }
+}
+
+loadSettings();
+</script>
+{% endblock %}

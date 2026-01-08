@@ -1,0 +1,279 @@
+{% extends "base.html" %}
+
+{% block title %}Tableau de bord - DAB+ Podcast Streamer{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h1><i class="bi bi-speedometer2"></i> Tableau de bord</h1>
+        <hr>
+    </div>
+</div>
+
+<!-- Status Cards -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card text-white bg-primary">
+            <div class="card-body">
+                <h5 class="card-title"><i class="bi bi-mic"></i> Podcasts</h5>
+                <p class="card-text display-4" id="podcast-count">-</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-success">
+            <div class="card-body">
+                <h5 class="card-title"><i class="bi bi-music-note-list"></i> Episodes</h5>
+                <p class="card-text display-4" id="episode-count">-</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-info">
+            <div class="card-body">
+                <h5 class="card-title"><i class="bi bi-calendar-check"></i> Programmes</h5>
+                <p class="card-text display-4" id="schedule-count">-</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white" id="broadcast-card">
+            <div class="card-body">
+                <h5 class="card-title"><i class="bi bi-broadcast"></i> Diffusion</h5>
+                <p class="card-text display-6" id="broadcast-status-text">Hors ligne</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Current Playback -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="bi bi-play-circle"></i> Lecture en cours</h5>
+            </div>
+            <div class="card-body">
+                <div id="now-playing">
+                    <p class="text-muted">Aucune lecture en cours</p>
+                </div>
+                <div class="btn-group mt-3" role="group">
+                    <button class="btn btn-outline-primary" onclick="controlPrevious()">
+                        <i class="bi bi-skip-backward-fill"></i>
+                    </button>
+                    <button class="btn btn-primary" id="play-pause-btn" onclick="controlPlayPause()">
+                        <i class="bi bi-play-fill"></i>
+                    </button>
+                    <button class="btn btn-outline-primary" onclick="controlSkip()">
+                        <i class="bi bi-skip-forward-fill"></i>
+                    </button>
+                    <button class="btn btn-outline-danger" onclick="controlStop()">
+                        <i class="bi bi-stop-fill"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Activity -->
+<div class="row">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="bi bi-clock-history"></i> Podcasts récents</h5>
+            </div>
+            <div class="card-body">
+                <ul class="list-group list-group-flush" id="recent-podcasts">
+                    <li class="list-group-item text-muted">Chargement...</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="bi bi-list-task"></i> Playlist</h5>
+            </div>
+            <div class="card-body">
+                <ul class="list-group list-group-flush" id="playlist-preview">
+                    <li class="list-group-item text-muted">Chargement...</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- System Status -->
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="bi bi-cpu"></i> État du système</h5>
+            </div>
+            <div class="card-body">
+                <div class="row" id="system-status">
+                    <div class="col-md-3">
+                        <strong>FFmpeg:</strong> <span id="ffmpeg-status" class="badge">-</span>
+                    </div>
+                    <div class="col-md-3">
+                        <strong>libfdk_aac:</strong> <span id="fdk-status" class="badge">-</span>
+                    </div>
+                    <div class="col-md-3">
+                        <strong>ODR-DabMux:</strong> <span id="dabmux-status" class="badge">-</span>
+                    </div>
+                    <div class="col-md-3">
+                        <strong>Version:</strong> <span id="version">-</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let isPlaying = false;
+
+async function loadDashboard() {
+    try {
+        // Load podcasts
+        const podcastsRes = await fetch('/api/podcasts');
+        const podcastsData = await podcastsRes.json();
+        if (podcastsData.success) {
+            const podcasts = podcastsData.podcasts;
+            document.getElementById('podcast-count').textContent = podcasts.length;
+
+            let episodeCount = 0;
+            podcasts.forEach(p => episodeCount += p.episodes.length);
+            document.getElementById('episode-count').textContent = episodeCount;
+
+            // Recent podcasts
+            const recentList = document.getElementById('recent-podcasts');
+            if (podcasts.length > 0) {
+                recentList.innerHTML = podcasts.slice(0, 5).map(p => `
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        ${p.title.substring(0, 40)}
+                        <span class="badge bg-primary rounded-pill">${p.episodes.length}</span>
+                    </li>
+                `).join('');
+            } else {
+                recentList.innerHTML = '<li class="list-group-item text-muted">Aucun podcast</li>';
+            }
+        }
+
+        // Load broadcast status
+        const statusRes = await fetch('/api/broadcast/status');
+        const statusData = await statusRes.json();
+        if (statusData.success) {
+            const scheduler = statusData.scheduler;
+            const card = document.getElementById('broadcast-card');
+            const statusText = document.getElementById('broadcast-status-text');
+
+            if (scheduler.playing) {
+                card.classList.remove('bg-secondary', 'bg-warning');
+                card.classList.add('bg-success');
+                statusText.textContent = 'En cours';
+                isPlaying = true;
+                updatePlayPauseButton();
+            } else if (scheduler.running) {
+                card.classList.remove('bg-secondary', 'bg-success');
+                card.classList.add('bg-warning');
+                statusText.textContent = 'En attente';
+            } else {
+                card.classList.remove('bg-success', 'bg-warning');
+                card.classList.add('bg-secondary');
+                statusText.textContent = 'Hors ligne';
+            }
+
+            // Now playing
+            if (scheduler.current_item) {
+                document.getElementById('now-playing').innerHTML = `
+                    <h4>${scheduler.current_item.episode}</h4>
+                    <p class="text-muted">${scheduler.current_item.podcast}</p>
+                `;
+            }
+
+            document.getElementById('schedule-count').textContent = scheduler.programs_count;
+        }
+
+        // Load playlist
+        const playlistRes = await fetch('/api/playlist');
+        const playlistData = await playlistRes.json();
+        if (playlistData.success) {
+            const playlistList = document.getElementById('playlist-preview');
+            if (playlistData.playlist.length > 0) {
+                playlistList.innerHTML = playlistData.playlist.slice(0, 5).map(item => `
+                    <li class="list-group-item ${item.is_current ? 'active' : ''}">
+                        <i class="bi bi-music-note"></i> ${item.episode_title.substring(0, 35)}
+                    </li>
+                `).join('');
+            } else {
+                playlistList.innerHTML = '<li class="list-group-item text-muted">Playlist vide</li>';
+            }
+        }
+
+        // Load system info
+        const sysRes = await fetch('/api/system/info');
+        const sysData = await sysRes.json();
+        if (sysData.success) {
+            document.getElementById('version').textContent = sysData.version;
+
+            const setStatus = (id, available) => {
+                const el = document.getElementById(id);
+                el.textContent = available ? 'OK' : 'Non disponible';
+                el.className = 'badge ' + (available ? 'bg-success' : 'bg-warning');
+            };
+
+            setStatus('ffmpeg-status', sysData.tools.ffmpeg);
+            setStatus('fdk-status', sysData.tools.libfdk_aac);
+            setStatus('dabmux-status', sysData.odr_dabmux);
+        }
+
+    } catch (error) {
+        console.error('Error loading dashboard:', error);
+    }
+}
+
+function updatePlayPauseButton() {
+    const btn = document.getElementById('play-pause-btn');
+    if (isPlaying) {
+        btn.innerHTML = '<i class="bi bi-pause-fill"></i>';
+    } else {
+        btn.innerHTML = '<i class="bi bi-play-fill"></i>';
+    }
+}
+
+async function controlPlayPause() {
+    const endpoint = isPlaying ? '/api/broadcast/pause' : '/api/broadcast/play';
+    await fetch(endpoint, { method: 'POST' });
+    isPlaying = !isPlaying;
+    updatePlayPauseButton();
+    loadDashboard();
+}
+
+async function controlSkip() {
+    await fetch('/api/broadcast/skip', { method: 'POST' });
+    loadDashboard();
+}
+
+async function controlPrevious() {
+    await fetch('/api/broadcast/previous', { method: 'POST' });
+    loadDashboard();
+}
+
+async function controlStop() {
+    await fetch('/api/broadcast/stop', { method: 'POST' });
+    isPlaying = false;
+    updatePlayPauseButton();
+    loadDashboard();
+}
+
+// Load dashboard on page load
+loadDashboard();
+
+// Auto-refresh every 5 seconds
+setInterval(loadDashboard, 5000);
+</script>
+{% endblock %}

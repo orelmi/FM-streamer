@@ -1,0 +1,210 @@
+/* DAB+ Podcast Streamer - Custom Styles */
+
+:root {
+    --dab-primary: #0d6efd;
+    --dab-success: #198754;
+    --dab-warning: #ffc107;
+    --dab-danger: #dc3545;
+}
+
+body {
+    background-color: #f8f9fa;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.container-fluid {
+    flex: 1;
+}
+
+/* Navbar */
+.navbar-brand {
+    font-weight: bold;
+    font-size: 1.3rem;
+}
+
+.navbar-brand i {
+    margin-right: 0.5rem;
+}
+
+/* Cards */
+.card {
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    border: none;
+    margin-bottom: 1rem;
+}
+
+.card-header {
+    font-weight: 600;
+}
+
+.card-header h5 {
+    margin-bottom: 0;
+}
+
+/* Dashboard Stats */
+.display-4 {
+    font-size: 2.5rem;
+}
+
+.display-6 {
+    font-size: 1.5rem;
+}
+
+/* Tables */
+.table th {
+    font-weight: 600;
+    border-top: none;
+}
+
+.table-hover tbody tr:hover {
+    background-color: rgba(13, 110, 253, 0.05);
+}
+
+/* Buttons */
+.btn-group .btn {
+    border-radius: 0;
+}
+
+.btn-group .btn:first-child {
+    border-radius: 0.375rem 0 0 0.375rem;
+}
+
+.btn-group .btn:last-child {
+    border-radius: 0 0.375rem 0.375rem 0;
+}
+
+/* Player Controls */
+.btn-group[role="group"] .btn {
+    padding: 0.5rem 1rem;
+}
+
+.btn-group[role="group"] .btn i {
+    font-size: 1.2rem;
+}
+
+/* Playlist */
+#playlist-table .table-primary {
+    background-color: rgba(13, 110, 253, 0.15);
+}
+
+#playlist-table .table-primary td {
+    font-weight: 600;
+}
+
+/* Badges */
+.badge {
+    font-weight: 500;
+}
+
+/* Status indicators */
+#broadcast-status {
+    font-size: 0.9rem;
+    padding: 0.4rem 0.8rem;
+}
+
+#broadcast-status .bi-circle-fill {
+    font-size: 0.6rem;
+    margin-right: 0.3rem;
+}
+
+/* Now playing */
+#now-playing h4 {
+    margin-bottom: 0.25rem;
+}
+
+#now-playing p {
+    font-size: 0.9rem;
+}
+
+/* List groups */
+.list-group-item {
+    border-left: none;
+    border-right: none;
+}
+
+.list-group-item:first-child {
+    border-top: none;
+}
+
+.list-group-item.active {
+    background-color: var(--dab-primary);
+    border-color: var(--dab-primary);
+}
+
+/* Modal */
+.modal-header {
+    background-color: #f8f9fa;
+    border-bottom: 1px solid #dee2e6;
+}
+
+/* Forms */
+.form-label {
+    font-weight: 500;
+}
+
+.form-control:focus,
+.form-select:focus {
+    border-color: var(--dab-primary);
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+}
+
+/* Footer */
+.footer {
+    margin-top: auto;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .display-4 {
+        font-size: 2rem;
+    }
+
+    .card-body {
+        padding: 1rem;
+    }
+
+    .btn-group .btn {
+        padding: 0.375rem 0.5rem;
+    }
+}
+
+/* Animations */
+@keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.5; }
+    100% { opacity: 1; }
+}
+
+.badge.bg-success {
+    animation: pulse 2s infinite;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: #f1f1f1;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #a1a1a1;
+}
+
+/* Print styles */
+@media print {
+    .navbar,
+    .btn,
+    .footer {
+        display: none !important;
+    }
+}

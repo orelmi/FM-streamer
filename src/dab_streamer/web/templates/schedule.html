@@ -1,0 +1,272 @@
+{% extends "base.html" %}
+
+{% block title %}Programmation - DAB+ Podcast Streamer{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center">
+            <h1><i class="bi bi-calendar-week"></i> Programmation</h1>
+            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addScheduleModal">
+                <i class="bi bi-plus-lg"></i> Nouveau programme
+            </button>
+        </div>
+        <hr>
+    </div>
+</div>
+
+<!-- Schedule Table -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Nom</th>
+                                <th>Podcast</th>
+                                <th>Heure</th>
+                                <th>Répétition</th>
+                                <th>État</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="schedule-body">
+                            <tr>
+                                <td colspan="6" class="text-center text-muted">Chargement...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Schedule Modal -->
+<div class="modal fade" id="addScheduleModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="bi bi-plus-lg"></i> Nouveau programme</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="add-schedule-form">
+                    <div class="mb-3">
+                        <label for="schedule-name" class="form-label">Nom du programme</label>
+                        <input type="text" class="form-control" id="schedule-name" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="schedule-podcast" class="form-label">Podcast</label>
+                        <select class="form-select" id="schedule-podcast" required>
+                            <option value="">Sélectionner un podcast...</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="schedule-time" class="form-label">Heure de diffusion</label>
+                        <input type="time" class="form-control" id="schedule-time" value="08:00" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="schedule-repeat" class="form-label">Répétition</label>
+                        <select class="form-select" id="schedule-repeat">
+                            <option value="once">Une fois</option>
+                            <option value="daily" selected>Tous les jours</option>
+                            <option value="weekdays">Jours ouvrés</option>
+                            <option value="weekend">Week-end</option>
+                            <option value="weekly">Hebdomadaire</option>
+                        </select>
+                    </div>
+                    <div class="mb-3" id="days-container" style="display: none;">
+                        <label class="form-label">Jours</label>
+                        <div class="btn-group w-100" role="group">
+                            <input type="checkbox" class="btn-check" id="day-0" value="0">
+                            <label class="btn btn-outline-primary" for="day-0">Lun</label>
+                            <input type="checkbox" class="btn-check" id="day-1" value="1">
+                            <label class="btn btn-outline-primary" for="day-1">Mar</label>
+                            <input type="checkbox" class="btn-check" id="day-2" value="2">
+                            <label class="btn btn-outline-primary" for="day-2">Mer</label>
+                            <input type="checkbox" class="btn-check" id="day-3" value="3">
+                            <label class="btn btn-outline-primary" for="day-3">Jeu</label>
+                            <input type="checkbox" class="btn-check" id="day-4" value="4">
+                            <label class="btn btn-outline-primary" for="day-4">Ven</label>
+                            <input type="checkbox" class="btn-check" id="day-5" value="5">
+                            <label class="btn btn-outline-primary" for="day-5">Sam</label>
+                            <input type="checkbox" class="btn-check" id="day-6" value="6">
+                            <label class="btn btn-outline-primary" for="day-6">Dim</label>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                <button type="button" class="btn btn-primary" onclick="addSchedule()">
+                    <i class="bi bi-plus-lg"></i> Créer
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let podcasts = [];
+
+async function loadPodcasts() {
+    try {
+        const res = await fetch('/api/podcasts');
+        const data = await res.json();
+
+        if (data.success) {
+            podcasts = data.podcasts;
+
+            const select = document.getElementById('schedule-podcast');
+            select.innerHTML = '<option value="">Sélectionner un podcast...</option>' +
+                podcasts.map(p => `<option value="${p.id}">${p.title}</option>`).join('');
+        }
+    } catch (error) {
+        console.error('Error loading podcasts:', error);
+    }
+}
+
+async function loadSchedules() {
+    try {
+        const res = await fetch('/api/schedule');
+        const data = await res.json();
+
+        if (data.success) {
+            const tbody = document.getElementById('schedule-body');
+
+            if (data.programs.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="6" class="text-center text-muted">Aucun programme planifié</td>
+                    </tr>
+                `;
+                return;
+            }
+
+            tbody.innerHTML = data.programs.map(prog => {
+                const podcast = podcasts.find(p => p.id === prog.podcast_id);
+                const podcastTitle = podcast ? podcast.title : 'Inconnu';
+
+                const repeatLabels = {
+                    'once': 'Une fois',
+                    'daily': 'Quotidien',
+                    'weekdays': 'Jours ouvrés',
+                    'weekend': 'Week-end',
+                    'weekly': 'Hebdomadaire'
+                };
+
+                return `
+                    <tr>
+                        <td>${prog.name}</td>
+                        <td>${podcastTitle}</td>
+                        <td><strong>${prog.start_time}</strong></td>
+                        <td>${repeatLabels[prog.repeat_mode] || prog.repeat_mode}</td>
+                        <td>
+                            ${prog.enabled
+                                ? '<span class="badge bg-success">Actif</span>'
+                                : '<span class="badge bg-secondary">Inactif</span>'}
+                        </td>
+                        <td>
+                            <div class="btn-group btn-group-sm">
+                                <button class="btn btn-outline-primary" onclick="toggleSchedule('${prog.id}', ${!prog.enabled})">
+                                    <i class="bi bi-${prog.enabled ? 'pause' : 'play'}"></i>
+                                </button>
+                                <button class="btn btn-outline-danger" onclick="deleteSchedule('${prog.id}')">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+    } catch (error) {
+        console.error('Error loading schedules:', error);
+    }
+}
+
+document.getElementById('schedule-repeat').addEventListener('change', function() {
+    const daysContainer = document.getElementById('days-container');
+    daysContainer.style.display = this.value === 'weekly' ? 'block' : 'none';
+});
+
+async function addSchedule() {
+    const name = document.getElementById('schedule-name').value;
+    const podcastId = document.getElementById('schedule-podcast').value;
+    const time = document.getElementById('schedule-time').value;
+    const repeat = document.getElementById('schedule-repeat').value;
+
+    if (!name || !podcastId || !time) {
+        alert('Veuillez remplir tous les champs');
+        return;
+    }
+
+    let days = [];
+    if (repeat === 'weekly') {
+        for (let i = 0; i < 7; i++) {
+            if (document.getElementById(`day-${i}`).checked) {
+                days.push(i);
+            }
+        }
+    }
+
+    try {
+        const res = await fetch('/api/schedule', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                name: name,
+                podcast_id: podcastId,
+                start_time: time,
+                repeat_mode: repeat,
+                days: days
+            })
+        });
+
+        const data = await res.json();
+
+        if (data.success) {
+            bootstrap.Modal.getInstance(document.getElementById('addScheduleModal')).hide();
+            document.getElementById('add-schedule-form').reset();
+            loadSchedules();
+        } else {
+            alert('Erreur: ' + data.error);
+        }
+    } catch (error) {
+        console.error('Error adding schedule:', error);
+    }
+}
+
+async function toggleSchedule(programId, enabled) {
+    try {
+        await fetch(`/api/schedule/${programId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ enabled: enabled })
+        });
+        loadSchedules();
+    } catch (error) {
+        console.error('Error toggling schedule:', error);
+    }
+}
+
+async function deleteSchedule(programId) {
+    if (!confirm('Supprimer ce programme?')) return;
+
+    try {
+        await fetch(`/api/schedule/${programId}`, { method: 'DELETE' });
+        loadSchedules();
+    } catch (error) {
+        console.error('Error deleting schedule:', error);
+    }
+}
+
+// Initial load
+loadPodcasts().then(() => loadSchedules());
+</script>
+{% endblock %}

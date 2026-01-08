@@ -1,0 +1,79 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "dab-podcast-streamer"
+version = "1.0.0"
+description = "Logiciel de diffusion podcast DAB+ (Digital Audio Broadcasting)"
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.9"
+authors = [
+    {name = "FM-Streamer Team", email = "contact@fm-streamer.local"}
+]
+keywords = ["DAB+", "podcast", "streaming", "radio", "broadcast", "audio"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Telecommunications Industry",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Multimedia :: Sound/Audio :: Players",
+    "Topic :: Communications :: Broadcasting",
+]
+
+dependencies = [
+    "feedparser>=6.0.0",
+    "requests>=2.28.0",
+    "mutagen>=1.46.0",
+    "flask>=2.3.0",
+    "flask-cors>=4.0.0",
+    "pyyaml>=6.0",
+    "click>=8.1.0",
+    "rich>=13.0.0",
+    "schedule>=1.2.0",
+    "python-dateutil>=2.8.0",
+    "aiohttp>=3.8.0",
+    "asyncio>=3.4.3",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-asyncio>=0.21.0",
+    "pytest-cov>=4.0.0",
+    "black>=23.0.0",
+    "flake8>=6.0.0",
+    "mypy>=1.0.0",
+]
+
+[project.scripts]
+dab-streamer = "dab_streamer.cli:main"
+dab-web = "dab_streamer.web.app:run_server"
+
+[project.urls]
+Homepage = "https://github.com/orelmi/FM-streamer"
+Documentation = "https://github.com/orelmi/FM-streamer#readme"
+Repository = "https://github.com/orelmi/FM-streamer"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.black]
+line-length = 100
+target-version = ['py39', 'py310', 'py311', 'py312']
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+
+[tool.mypy]
+python_version = "3.9"
+warn_return_any = true
+warn_unused_configs = true

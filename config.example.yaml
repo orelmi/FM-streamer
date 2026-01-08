@@ -1,0 +1,94 @@
+# RadioLM - Configuration DAB+ Podcast Streamer
+# Copiez ce fichier vers config.yaml et adaptez les valeurs
+
+# Configuration DAB+
+dab:
+  # Nom de l'ensemble DAB+ (max 16 caracteres)
+  ensemble_label: "RadioLM"
+
+  # Identifiant unique de l'ensemble (format hexadecimal)
+  ensemble_id: "0x1234"
+
+  # Extended Country Code (0xE1 = France)
+  ensemble_ecc: "0xE1"
+
+  # Identifiant du service
+  service_id: "0x4001"
+
+  # Nom du service (max 16 caracteres)
+  service_label: "RadioLM"
+
+  # ID du composant
+  component_id: 1
+
+  # ID du sous-canal
+  subchannel_id: 1
+
+  # Niveau de protection EEP (1-4, 3 recommande)
+  protection_level: 3
+
+  # Debit en kbps (32, 48, 64, 80, 96, 128)
+  bitrate: 64
+
+  # Frequence d'echantillonnage en Hz
+  sample_rate: 48000
+
+  # Nombre de canaux (1=mono, 2=stereo)
+  channels: 2
+
+  # Format de sortie: edi, eti, ou zmq
+  output_format: "edi"
+
+# Configuration de l'encodeur audio
+encoder:
+  # Codec audio: he-aacv2 (recommande), he-aacv1, aac-lc
+  codec: "he-aacv2"
+
+  # Debit d'encodage en kbps
+  bitrate: 64
+
+  # Frequence d'echantillonnage
+  sample_rate: 48000
+
+  # Nombre de canaux
+  channels: 2
+
+  # Chemin vers FFmpeg
+  ffmpeg_path: "ffmpeg"
+
+  # Chemin vers ODR-AudioEnc (optionnel)
+  odr_audioenc_path: "odr-audioenc"
+
+# Configuration des podcasts
+podcast:
+  # Repertoire de telechargement
+  download_dir: "./podcasts"
+
+  # Nombre maximum d'episodes par podcast
+  max_episodes: 10
+
+  # Nettoyage automatique des anciens episodes
+  auto_cleanup: true
+
+  # Supprimer les episodes apres X jours
+  cleanup_days: 30
+
+# Configuration de l'interface web
+web:
+  # Adresse d'ecoute (0.0.0.0 pour toutes les interfaces)
+  host: "0.0.0.0"
+
+  # Port HTTP
+  port: 8080
+
+  # Mode debug (desactiver en production!)
+  debug: false
+
+  # Cle secrete pour les sessions (CHANGEZ EN PRODUCTION!)
+  secret_key: "changez-moi-en-production"
+
+# Niveau de log: DEBUG, INFO, WARNING, ERROR
+log_level: "INFO"
+
+# Repertoire des donnees
+data_dir: "./data"
