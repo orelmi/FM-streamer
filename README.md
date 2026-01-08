@@ -204,17 +204,61 @@ src/dab_streamer/
 | Codec | HE-AAC v2 | Codec optimal pour bas debit |
 | Bitrate | 64 kbps | Debit recommande pour podcast |
 
-## Integration ODR-DabMux
+## Diffusion DAB+ Reelle (ODR)
 
-Pour une diffusion DAB+ reelle, installez ODR-DabMux :
+RadioLM integre les outils Open Digital Radio (ODR) pour une diffusion DAB+ reelle sur les ondes.
+
+**ATTENTION: La diffusion radio est reglementee! En France, une autorisation CSA/ARCEP est requise.**
+
+### Installation des outils ODR
 
 ```bash
-# Generer la configuration
-dab-streamer broadcast generate-config
+# Installation automatique (Ubuntu/Debian)
+sudo ./scripts/install_odr.sh
 
-# Le fichier dabmux.mux est pret pour ODR-DabMux
-odr-dabmux dabmux.mux
+# Avec support LimeSDR
+sudo ./scripts/install_odr.sh --with-limesdr
+
+# Verifier l'installation
+dab-streamer odr check
 ```
+
+### Demarrer une diffusion DAB+ reelle
+
+```bash
+# Lister les canaux disponibles en France
+dab-streamer odr channels
+
+# Demarrer la diffusion sur le canal 12C
+dab-streamer odr start audio.mp3 --channel 12C
+
+# Avec entree audio ALSA
+dab-streamer odr start alsa:default --channel 12C
+
+# Mettre a jour le texte defilant (DLS)
+dab-streamer odr dls "RadioLM - Votre podcast du jour"
+
+# Arreter la diffusion
+dab-streamer odr stop
+```
+
+### Materiel requis
+
+| Materiel | Description |
+|----------|-------------|
+| LimeSDR | SDR recommande pour DAB+ |
+| PlutoSDR | Alternative economique |
+| HackRF | Pour tests (puissance limitee) |
+| Antenne | Antenne accordee Bande III (174-240 MHz) |
+
+### Canaux DAB+ France (Bande III)
+
+Les canaux les plus courants en France :
+- **5A-5D** : 174.928 - 180.064 MHz
+- **6A-6D** : 181.936 - 187.072 MHz
+- **12A-12D** : 223.936 - 229.072 MHz
+
+Utilisez `dab-streamer odr channels` pour la liste complete.
 
 ## Developpement
 

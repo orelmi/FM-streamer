@@ -743,5 +743,239 @@ def run_web(ctx, host: str, port: int):
     app.run(host=host, port=port, debug=config.web.debug)
 
 
+# ============================================================================
+# Commandes ODR - Diffusion DAB+ reelle
+# ============================================================================
+
+@main.group("odr")
+def odr_group():
+    """Diffusion DAB+ reelle avec Open Digital Radio."""
+    pass
+
+
+@odr_group.command("check")
+@click.pass_context
+def odr_check(ctx):
+    """Verifie l'installation des outils ODR."""
+    config: Config = ctx.obj["config"]
+
+    from .core.odr_broadcast import ODRBroadcast, ODRInstaller
+
+    console.print(Panel.fit("[bold]Verification des outils ODR[/bold]"))
+
+    odr = ODRBroadcast(config)
+    tools = odr.odr_tools_available
+
+    table = Table(title="Outils Open Digital Radio")
+    table.add_column("Outil", style="cyan")
+    table.add_column("Status")
+    table.add_column("Description")
+
+    descriptions = {
+        "odr-dabmux": "Multiplexeur DAB+",
+        "odr-dabmod": "Modulateur OFDM",
+        "odr-audioenc": "Encodeur audio DAB+",
+        "odr-padenc": "Encodeur PAD (DLS/Slideshow)",
+    }
+
+    all_ok = True
+    for tool, available in tools.items():
+        status = "[green]OK[/green]" if available else "[red]Non installe[/red]"
+        if not available:
+            all_ok = False
+        table.add_row(tool, status, descriptions.get(tool, ""))
+
+    console.print(table)
+
+    if not all_ok:
+        console.print("\n[yellow]Certains outils ODR ne sont pas installes.[/yellow]")
+        console.print("Pour installer, executez:")
+        console.print("  [cyan]sudo ./scripts/install_odr.sh[/cyan]")
+        console.print("\nOu consultez: https://www.opendigitalradio.org/")
+
+    # Verifier les dependances
+    console.print("\n[bold]Dependances systeme:[/bold]")
+    deps = ODRInstaller.check_dependencies()
+    for dep, available in deps.items():
+        status = "[green]OK[/green]" if available else "[yellow]Manquant[/yellow]"
+        console.print(f"  {dep}: {status}")
+
+
+@odr_group.command("channels")
+def odr_channels():
+    """Liste les canaux DAB+ disponibles en France."""
+    from .core.odr_broadcast import ODRBroadcast
+
+    console.print(Panel.fit("[bold]Canaux DAB+ France (Bande III)[/bold]"))
+
+    channels = ODRBroadcast.get_available_channels()
+
+    table = Table(title="Canaux disponibles")
+    table.add_column("Canal", style="cyan")
+    table.add_column("Frequence (MHz)", justify="right")
+
+    for channel, freq in sorted(channels.items(), key=lambda x: x[1]):
+        table.add_row(channel, f"{freq:.3f}")
+
+    console.print(table)
+
+    console.print("\n[yellow]ATTENTION: La diffusion radio est reglementee![/yellow]")
+    console.print("En France, une autorisation CSA/ARCEP est requise.")
+
+
+@odr_group.command("start")
+@click.argument("audio_source")
+@click.option("--channel", "-c", default="12C", help="Canal DAB+ (ex: 12C)")
+@click.option("--power", "-p", type=float, default=-10.0, help="Puissance en dBm")
+@click.option("--device", "-d", default="driver=lime", help="Device SDR")
+@click.pass_context
+def odr_start(ctx, audio_source: str, channel: str, power: float, device: str):
+    """
+    Demarre la diffusion DAB+ reelle.
+
+    AUDIO_SOURCE peut etre:
+    - Un fichier audio (mp3, wav, etc.)
+    - alsa:default (entree audio ALSA)
+    - jack (entree JACK)
+
+    ATTENTION: Respectez la reglementation radio!
+    """
+    config: Config = ctx.obj["config"]
+
+    from .core.odr_broadcast import ODRBroadcast, ODRConfig, OutputType
+
+    console.print(Panel.fit("[bold red]DIFFUSION DAB+ REELLE[/bold red]"))
+    console.print("")
+    console.print("[yellow]ATTENTION: La diffusion radio est reglementee![/yellow]")
+    console.print("[yellow]Assurez-vous d'avoir les autorisations necessaires.[/yellow]")
+    console.print("")
+
+    if not click.confirm("Voulez-vous continuer?"):
+        return
+
+    odr = ODRBroadcast(config)
+
+    # Verifier les outils
+    if not all(odr.odr_tools_available.values()):
+        console.print("[red]Certains outils ODR ne sont pas installes.[/red]")
+        console.print("Executez: dab-streamer odr check")
+        return
+
+    # Configurer
+    odr_config = ODRConfig(
+        output_power_dbm=power,
+        sdr_device=device,
+        output_type=OutputType.SOAPYSDR,
+    )
+    odr.configure(odr_config)
+
+    # Definir le canal
+    if not odr.set_channel(channel):
+        console.print(f"[red]Canal invalide: {channel}[/red]")
+        console.print("Utilisez: dab-streamer odr channels")
+        return
+
+    console.print(f"\n[bold]Configuration:[/bold]")
+    console.print(f"  Radio: {config.dab.ensemble_label}")
+    console.print(f"  Canal: {channel} ({odr.odr_config.frequency_mhz} MHz)")
+    console.print(f"  Puissance: {power} dBm")
+    console.print(f"  Source: {audio_source}")
+    console.print("")
+
+    # Demarrer la diffusion
+    console.print("[cyan]Demarrage de la diffusion...[/cyan]")
+
+    if not odr.start_broadcast(audio_source):
+        console.print("[red]Echec du demarrage de la diffusion[/red]")
+        return
+
+    console.print("\n[green]Diffusion DAB+ en cours![/green]")
+    console.print("Appuyez sur Ctrl+C pour arreter.\n")
+
+    try:
+        while True:
+            status = odr.get_status()
+            uptime = status["uptime_formatted"]
+            rprint(f"[cyan]RadioLM | Canal {channel} | Uptime: {uptime}[/cyan]", end="\r")
+            import time
+            time.sleep(1)
+    except KeyboardInterrupt:
+        console.print("\n\n[yellow]Arret de la diffusion...[/yellow]")
+        odr.stop_broadcast()
+        console.print("[green]Diffusion arretee[/green]")
+
+
+@odr_group.command("stop")
+@click.pass_context
+def odr_stop(ctx):
+    """Arrete la diffusion DAB+ reelle."""
+    console.print("[yellow]Arret de tous les processus ODR...[/yellow]")
+
+    import subprocess
+    for proc in ["odr-audioenc", "odr-padenc", "odr-dabmod", "odr-dabmux"]:
+        try:
+            subprocess.run(["pkill", "-f", proc], capture_output=True)
+        except Exception:
+            pass
+
+    console.print("[green]Processus ODR arretes[/green]")
+
+
+@odr_group.command("status")
+@click.pass_context
+def odr_status(ctx):
+    """Affiche l'etat de la diffusion ODR."""
+    config: Config = ctx.obj["config"]
+
+    from .core.odr_broadcast import ODRBroadcast
+
+    odr = ODRBroadcast(config)
+    status = odr.get_status()
+
+    table = Table(title="Etat diffusion ODR")
+    table.add_column("Composant", style="cyan")
+    table.add_column("Status")
+
+    table.add_row("Diffusion active", "[green]Oui[/green]" if status["is_running"] else "[red]Non[/red]")
+    table.add_row("Multiplexeur", "[green]OK[/green]" if status["mux_running"] else "[dim]Arrete[/dim]")
+    table.add_row("Modulateur", "[green]OK[/green]" if status["mod_running"] else "[dim]Arrete[/dim]")
+    table.add_row("Encodeur", "[green]OK[/green]" if status["encoder_running"] else "[dim]Arrete[/dim]")
+
+    if status["frequency_mhz"] > 0:
+        table.add_row("Frequence", f"{status['frequency_mhz']} MHz")
+        table.add_row("Puissance", f"{status['output_power_dbm']} dBm")
+        table.add_row("Uptime", status["uptime_formatted"])
+
+    if status["last_error"]:
+        table.add_row("Derniere erreur", f"[red]{status['last_error']}[/red]")
+
+    console.print(table)
+
+
+@odr_group.command("dls")
+@click.argument("text")
+@click.pass_context
+def odr_dls(ctx, text: str):
+    """Met a jour le Dynamic Label (texte defilant)."""
+    config: Config = ctx.obj["config"]
+
+    from .core.odr_broadcast import ODRBroadcast
+
+    odr = ODRBroadcast(config)
+    if odr.update_dls(text):
+        console.print(f"[green]DLS mis a jour: {text}[/green]")
+    else:
+        console.print("[red]Erreur lors de la mise a jour du DLS[/red]")
+
+
+@odr_group.command("install")
+def odr_install():
+    """Affiche les instructions d'installation ODR."""
+    from .core.odr_broadcast import ODRInstaller
+
+    console.print(Panel.fit("[bold]Installation Open Digital Radio[/bold]"))
+    console.print(ODRInstaller.get_install_instructions())
+
+
 if __name__ == "__main__":
     main()
