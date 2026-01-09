@@ -260,6 +260,16 @@ Les canaux les plus courants en France :
 
 Utilisez `dab-streamer odr channels` pour la liste complete.
 
+**Pour un guide complet de deploiement en France, consultez :**
+**[Guide de Deploiement DAB+ France](docs/DEPLOIEMENT_DAB_FRANCE.md)**
+
+## Documentation
+
+| Document | Description |
+|----------|-------------|
+| [Guide de Deploiement France](docs/DEPLOIEMENT_DAB_FRANCE.md) | Infrastructure DAB+, integration TDF/towerCast, reglementation |
+| [Configuration](config.example.yaml) | Exemple de configuration complete |
+
 ## Developpement
 
 ```bash
